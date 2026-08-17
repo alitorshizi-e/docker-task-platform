@@ -1,0 +1,56 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+    image: docker-task-platform-app:0.2
+
+    ports:
+      - "127.0.0.1:8000:8000"
+
+    environment:
+      DB_HOST: db
+      DB_PORT: "5432"
+      DB_NAME: ${POSTGRES_DB}
+      DB_USER: ${POSTGRES_USER}
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+
+    depends_on:
+      - db
+      - redis
+
+    networks:
+      - app_network
+
+  db:
+    image: postgres:16-alpine
+
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+    networks:
+      - app_network
+
+  redis:
+    image: redis:7-alpine
+
+    networks:
+      - app_network
+
+
+volumes:
+  postgres_data:
+
+
+networks:
+  app_network:
+    driver: bridge
