@@ -95,11 +95,55 @@ def root():
     }
 
 
+@app.get("/health/live")
+def liveness():
+    return {
+        "status": "alive"
+    }
+
+
+@app.get("/health/ready")
+def readiness():
+    dependencies = {
+        "postgresql": False,
+        "redis": False,
+    }
+
+    try:
+        with get_db_connection() as conn:
+            with conn.cursor() as cursor:
+                cursor.execute("SELECT 1")
+                cursor.fetchone()
+
+        dependencies["postgresql"] = True
+
+    except Exception:
+        pass
+
+    try:
+        dependencies["redis"] = bool(redis_client.ping())
+
+    except Exception:
+        pass
+
+    if not all(dependencies.values()):
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "status": "not_ready",
+                "dependencies": dependencies,
+            },
+        )
+
+    return {
+        "status": "ready",
+        "dependencies": dependencies,
+    }
+
+
 @app.get("/health")
 def health():
-    return {
-        "status": "healthy"
-    }
+    return readiness()
 
 
 @app.post("/tasks", status_code=201)
